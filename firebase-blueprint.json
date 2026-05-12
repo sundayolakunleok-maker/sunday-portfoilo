@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "A data analysis project showcase item.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the project." },
+        "typeOfWork": { "type": "string", "description": "Category of work (e.g., Medical Analysis, Business Analysis)." },
+        "tools": { "type": "string", "description": "Tools used (e.g., Excel, Power BI, Python)." },
+        "problem": { "type": "string", "description": "The problem addressed by the project." },
+        "solution": { "type": "string", "description": "The steps taken to solve the problem." },
+        "recommendation": { "type": "string", "description": "Proposed improvements or next steps." },
+        "imageUrl": { "type": "string", "description": "URL to the project screenshot." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "order": { "type": "integer", "description": "Display order." }
+      },
+      "required": ["title", "typeOfWork", "tools", "problem", "solution"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Basic information about the portfolio owner.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "bio": { "type": "string" },
+        "summary": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "projects": {
+      "schema": "Project",
+      "description": "Collection of analytical projects."
+    },
+    "profile": {
+      "schema": "UserProfile",
+      "description": "User profile information."
+    }
+  }
+}
