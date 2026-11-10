@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { 
   GraduationCap, 
   BookOpen, 
@@ -23,8 +23,12 @@ import {
   Send,
   UserCheck,
   Building2,
-  Layers
+  Layers,
+  Download,
+  UploadCloud
 } from 'lucide-react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { mit624CourseInfo, courseActivities, type CourseActivity } from '../courseData';
 
 interface Mit624CourseProps {
@@ -36,6 +40,28 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
   const [activities, setActivities] = useState<CourseActivity[]>(courseActivities);
   const [discussion1InputUrl, setDiscussion1InputUrl] = useState(courseActivities[0]?.youtubeUrl || '');
   const [activeYoutubeUrl, setActiveYoutubeUrl] = useState(courseActivities[0]?.youtubeUrl || '');
+  
+  // Real-time published academic course resources from Firestore
+  const [courseResources, setCourseResources] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadCourseResources() {
+      try {
+        const q = query(
+          collection(db, 'resources'),
+          where('platform', '==', 'mit624'),
+          where('status', '==', 'published')
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          setCourseResources(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        }
+      } catch (e) {
+        // Initial/offline fallback
+      }
+    }
+    loadCourseResources();
+  }, []);
   
   // Interactive Peer Feedback state for Discussion 1
   const [peerFeedbackList, setPeerFeedbackList] = useState([
@@ -333,6 +359,80 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
               Chronological coursework, multimedia presentations, repository artifacts, and academic deliverables.
             </p>
           </div>
+
+          {/* Dynamic Admin-Published Course Resources Repository */}
+          {courseResources.length > 0 && (
+            <div className="rounded-3xl border border-purple-200/90 bg-gradient-to-r from-purple-50/60 to-blue-50/40 p-6 sm:p-8 shadow-sm dark:border-purple-900/60 dark:from-purple-950/20 dark:to-slate-900">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-600 text-white shadow-md shadow-purple-600/30">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Published Course Materials & Live Attachments
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Real-time documents, assignment guidelines, and deliverables published by the course instructor.
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
+                  {courseResources.length} Published
+                </span>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-6">
+                {courseResources.map((res) => (
+                  <div key={res.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                          {res.courseModule || 'General Material'}
+                        </span>
+                        <span className="text-[10px] font-medium text-slate-400 capitalize">
+                          {res.contentType}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1">{res.title}</h4>
+                      {res.description && (
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{res.description}</p>
+                      )}
+                      {res.fileName && (
+                        <div className="mt-2 text-[10px] text-slate-400 font-mono">
+                          {res.fileName} {res.fileSize ? `(${res.fileSize})` : ''}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                      {res.fileUrl && res.allowDownload !== false ? (
+                        <a
+                          href={res.fileUrl}
+                          download={res.fileName || 'material'}
+                          className="font-bold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
+                        >
+                          <Download className="h-3.5 w-3.5" /> Download File
+                        </a>
+                      ) : (
+                        <span className="text-[11px] text-slate-400">View Online</span>
+                      )}
+                      {res.externalUrl && (
+                        <a
+                          href={res.externalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-semibold text-slate-600 dark:text-slate-300 hover:text-purple-600 inline-flex items-center gap-1"
+                        >
+                          External Link ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Activity 1: Discussion 1 */}
           <article id="discussion-1" className="scroll-mt-24 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900">

@@ -4,6 +4,7 @@ import Skills from '../components/Skills';
 import Projects from '../components/Projects';
 import SoftwareShowcase from '../components/SoftwareShowcase';
 import ProgramPortfolio from '../components/ProgramPortfolio';
+import YouTubeSection from '../components/YouTubeSection';
 import Experience from '../components/Experience';
 import Certifications from '../components/Certifications';
 import ResumeSection from '../components/ResumeSection';
@@ -22,6 +23,7 @@ export default function Home({ onNavigateToCourse }: HomeProps) {
       <Projects />
       <SoftwareShowcase />
       <ProgramPortfolio onNavigateToCourse={onNavigateToCourse} />
+      <YouTubeSection />
       <Experience />
       <Certifications />
       <ResumeSection />

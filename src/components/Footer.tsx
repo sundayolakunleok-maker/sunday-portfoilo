@@ -1,11 +1,22 @@
-import { BarChart2, Linkedin, Mail, Smartphone, GraduationCap, Github, BookOpen, Code2, Award, FileText } from 'lucide-react';
+import { 
+  BarChart2, 
+  Linkedin, 
+  Mail, 
+  Smartphone, 
+  GraduationCap, 
+  Github, 
+  BookOpen, 
+  Youtube, 
+  ShieldCheck 
+} from 'lucide-react';
 import { profile } from '../data';
 
 interface FooterProps {
   onNavigateCourse?: () => void;
+  onNavigateAdmin?: () => void;
 }
 
-export default function Footer({ onNavigateCourse }: FooterProps) {
+export default function Footer({ onNavigateCourse, onNavigateAdmin }: FooterProps) {
   return (
     <footer className="border-t border-slate-200 bg-white pt-16 pb-8 dark:border-slate-800 dark:bg-slate-950">
       <div className="container px-6 mx-auto">
@@ -40,13 +51,14 @@ export default function Footer({ onNavigateCourse }: FooterProps) {
               <li><a href="#skills" className="hover:text-blue-600 dark:hover:text-white transition">Skills & Tools</a></li>
               <li><a href="#projects" className="hover:text-blue-600 dark:hover:text-white transition">Data Analytics</a></li>
               <li><a href="#software" className="hover:text-blue-600 dark:hover:text-white transition">Software Systems</a></li>
+              <li><a href="#youtube" className="hover:text-blue-600 dark:hover:text-white transition">YouTube Channel</a></li>
             </ul>
           </div>
 
           {/* Academic & Professional */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-              Academic & Career
+              Academic & Admin
             </h4>
             <ul className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
               <li>
@@ -68,6 +80,21 @@ export default function Footer({ onNavigateCourse }: FooterProps) {
               <li><a href="#certifications" className="hover:text-blue-600 dark:hover:text-white transition">Certifications</a></li>
               <li><a href="#resume" className="hover:text-blue-600 dark:hover:text-white transition">Resume / CV</a></li>
               <li><a href="#contact" className="hover:text-blue-600 dark:hover:text-white transition">Contact / Hire Me</a></li>
+              <li>
+                <a 
+                  href="/login" 
+                  onClick={(e) => {
+                    if (onNavigateAdmin) {
+                      e.preventDefault();
+                      onNavigateAdmin();
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 font-semibold text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-white transition"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Admin Control Centre
+                </a>
+              </li>
             </ul>
           </div>
           
@@ -87,13 +114,13 @@ export default function Footer({ onNavigateCourse }: FooterProps) {
                 <Github className="h-4 w-4" />
               </a>
               <a 
-                href={profile.mediumProfile} 
+                href="https://www.youtube.com/@OLAKUNLEokegbemi" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-blue-600 hover:text-white transition dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-blue-600"
-                title="Medium Articles"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-red-600 hover:text-white transition dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-red-600"
+                title="Official YouTube: Olakunle Data"
               >
-                <BookOpen className="h-4 w-4" />
+                <Youtube className="h-4 w-4" />
               </a>
               <a 
                 href={profile.linkedin} 
@@ -103,6 +130,15 @@ export default function Footer({ onNavigateCourse }: FooterProps) {
                 title="LinkedIn Profile"
               >
                 <Linkedin className="h-4 w-4" />
+              </a>
+              <a 
+                href={profile.mediumProfile} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:bg-blue-600 hover:text-white transition dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-blue-600"
+                title="Medium Articles"
+              >
+                <BookOpen className="h-4 w-4" />
               </a>
               <a 
                 href={`mailto:${profile.email}`} 
@@ -129,7 +165,21 @@ export default function Footer({ onNavigateCourse }: FooterProps) {
         
         <div className="mt-16 border-t border-slate-100 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:border-slate-800">
           <p>© {new Date().getFullYear()} Sunday Okegbemi. All rights reserved.</p>
-          <p>Data Analytics • Software Development • MIT 624 Academic Portfolio</p>
+          <div className="flex items-center gap-4">
+            <span>Data Analytics • Software Systems • MIT 624 Academic</span>
+            <a 
+              href="/login" 
+              onClick={(e) => {
+                if (onNavigateAdmin) {
+                  e.preventDefault();
+                  onNavigateAdmin();
+                }
+              }}
+              className="hover:underline flex items-center gap-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <ShieldCheck className="h-3 w-3" /> Admin
+            </a>
+          </div>
         </div>
       </div>
     </footer>

@@ -2,43 +2,157 @@
   "entities": {
     "Project": {
       "title": "Project",
-      "description": "A data analysis project showcase item.",
+      "description": "A portfolio project showcase item.",
       "type": "object",
       "properties": {
-        "title": { "type": "string", "description": "The title of the project." },
-        "typeOfWork": { "type": "string", "description": "Category of work (e.g., Medical Analysis, Business Analysis)." },
-        "tools": { "type": "string", "description": "Tools used (e.g., Excel, Power BI, Python)." },
-        "problem": { "type": "string", "description": "The problem addressed by the project." },
-        "solution": { "type": "string", "description": "The steps taken to solve the problem." },
-        "recommendation": { "type": "string", "description": "Proposed improvements or next steps." },
-        "imageUrl": { "type": "string", "description": "URL to the project screenshot." },
+        "title": { "type": "string", "maxLength": 200, "description": "The title of the project." },
+        "typeOfWork": { "type": "string", "maxLength": 100, "description": "Category of work (e.g., Medical Analysis, Business Analysis)." },
+        "tools": { "type": "string", "maxLength": 1000, "description": "Tools used (e.g., Excel, Power BI, Python)." },
+        "problem": { "type": "string", "maxLength": 5000, "description": "The problem addressed by the project." },
+        "solution": { "type": "string", "maxLength": 5000, "description": "The steps taken to solve the problem." },
+        "recommendation": { "type": "string", "maxLength": 2000, "description": "Proposed improvements or next steps." },
+        "imageUrl": { "type": "string", "maxLength": 1000, "description": "URL to the project screenshot." },
+        "mediumUrl": { "type": "string", "maxLength": 1000, "description": "Medium article URL." },
+        "githubUrl": { "type": "string", "maxLength": 1000, "description": "GitHub repository URL." },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"], "description": "Publication status." },
         "createdAt": { "type": "string", "format": "date-time" },
         "order": { "type": "integer", "description": "Display order." }
       },
       "required": ["title", "typeOfWork", "tools", "problem", "solution"]
+    },
+    "Resource": {
+      "title": "Resource",
+      "description": "An uploaded document, assignment, task, or course material.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200, "description": "Resource title." },
+        "description": { "type": "string", "maxLength": 5000, "description": "Detailed description." },
+        "category": { "type": "string", "maxLength": 100, "description": "Resource category." },
+        "platform": { "type": "string", "enum": ["portfolio", "mit624"], "description": "Target platform." },
+        "courseModule": { "type": "string", "maxLength": 100, "description": "Associated course module or section." },
+        "contentType": { "type": "string", "enum": ["document", "assignment", "task", "video", "image", "code", "other"], "description": "Content type." },
+        "fileUrl": { "type": "string", "maxLength": 2000, "description": "Cloud file storage or direct download URL." },
+        "fileName": { "type": "string", "maxLength": 255, "description": "Original file name." },
+        "fileSize": { "type": "string", "maxLength": 50, "description": "Formatted file size." },
+        "mimeType": { "type": "string", "maxLength": 100, "description": "MIME type." },
+        "thumbnailUrl": { "type": "string", "maxLength": 2000, "description": "Thumbnail or preview image URL." },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"], "description": "Visibility status." },
+        "isFeatured": { "type": "boolean", "description": "Whether highlighted as featured." },
+        "allowDownload": { "type": "boolean", "description": "Whether visitors can download the file." },
+        "externalUrl": { "type": "string", "maxLength": 2000, "description": "External resource or repository URL." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "platform", "status"]
+    },
+    "Video": {
+      "title": "Video",
+      "description": "YouTube or media presentation item.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200, "description": "Video title." },
+        "description": { "type": "string", "maxLength": 3000, "description": "Video summary or notes." },
+        "youtubeUrl": { "type": "string", "maxLength": 1000, "description": "YouTube video or channel URL." },
+        "videoId": { "type": "string", "maxLength": 50, "description": "YouTube 11-char video ID." },
+        "thumbnailUrl": { "type": "string", "maxLength": 1000, "description": "Thumbnail URL." },
+        "platform": { "type": "string", "enum": ["portfolio", "mit624", "both"], "description": "Platform target." },
+        "category": { "type": "string", "maxLength": 100, "description": "Topic category." },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"] },
+        "isFeatured": { "type": "boolean" },
+        "order": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "youtubeUrl", "status"]
+    },
+    "ContactMessage": {
+      "title": "Contact Message",
+      "description": "Inbound inquiry submitted via the website contact form.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 120, "description": "Sender name." },
+        "email": { "type": "string", "maxLength": 150, "description": "Sender email." },
+        "subject": { "type": "string", "maxLength": 200, "description": "Message subject." },
+        "message": { "type": "string", "maxLength": 5000, "description": "Message body." },
+        "status": { "type": "string", "enum": ["unread", "read", "replied"], "description": "Message status." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "subject", "message"]
     },
     "UserProfile": {
       "title": "User Profile",
       "description": "Basic information about the portfolio owner.",
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
-        "email": { "type": "string" },
-        "phone": { "type": "string" },
-        "whatsapp": { "type": "string" },
-        "bio": { "type": "string" },
-        "summary": { "type": "string" }
+        "name": { "type": "string", "maxLength": 150 },
+        "title": { "type": "string", "maxLength": 200 },
+        "email": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "whatsapp": { "type": "string", "maxLength": 50 },
+        "location": { "type": "string", "maxLength": 150 },
+        "bio": { "type": "string", "maxLength": 5000 },
+        "photoUrl": { "type": "string", "maxLength": 1000 },
+        "resumeUrl": { "type": "string", "maxLength": 1000 }
       }
+    },
+    "AdminAuth": {
+      "title": "Admin Auth",
+      "description": "Encrypted administrator credential state and security settings.",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string", "maxLength": 50 },
+        "passwordHash": { "type": "string", "maxLength": 256 },
+        "salt": { "type": "string", "maxLength": 128 },
+        "mustChangePassword": { "type": "boolean" },
+        "recoveryPinHash": { "type": "string", "maxLength": 256 },
+        "failedAttempts": { "type": "integer" },
+        "lockedUntil": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["username", "passwordHash", "salt"]
+    },
+    "ActivityLog": {
+      "title": "Activity Log",
+      "description": "Administrative audit trail entry.",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "maxLength": 100 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "entityType": { "type": "string", "maxLength": 50 },
+        "entityId": { "type": "string", "maxLength": 100 },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["action", "timestamp"]
     }
   },
   "firestore": {
     "projects": {
       "schema": "Project",
-      "description": "Collection of analytical projects."
+      "description": "Collection of analytical and custom software projects."
+    },
+    "resources": {
+      "schema": "Resource",
+      "description": "Uploaded documents, assignments, tasks, and course materials."
+    },
+    "videos": {
+      "schema": "Video",
+      "description": "YouTube video collection and media presentations."
+    },
+    "messages": {
+      "schema": "ContactMessage",
+      "description": "Inbound public contact inquiries."
     },
     "profile": {
       "schema": "UserProfile",
-      "description": "User profile information."
+      "description": "Global user profile and portfolio settings."
+    },
+    "admin_auth": {
+      "schema": "AdminAuth",
+      "description": "Secure administrator credential and session configuration."
+    },
+    "activity_logs": {
+      "schema": "ActivityLog",
+      "description": "Administrative audit history."
     }
   }
 }
