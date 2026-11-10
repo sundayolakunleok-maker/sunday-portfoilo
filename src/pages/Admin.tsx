@@ -99,7 +99,7 @@ export default function Admin() {
       <div className="flex items-center justify-between mb-12">
         <div>
           <h1 className="text-3xl font-bold dark:text-white">Admin Dashboard</h1>
-          <p className="text-slate-600 dark:text-slate-400">Welcome, {user.displayName}</p>
+          <p className="text-slate-600 dark:text-slate-400">Welcome, {user.displayName || user.email}</p>
         </div>
         <button onClick={handleLogout} className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400">
           <LogOut className="h-4 w-4" /> Logout
