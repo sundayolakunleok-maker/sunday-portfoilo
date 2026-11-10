@@ -1,154 +1,168 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { ExternalLink, Layers, Search, Info } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
-
-interface Project {
-  id: string;
-  title: string;
-  typeOfWork: string;
-  tools: string;
-  problem: string;
-  solution: string;
-  imageUrl: string;
-}
+import { useState } from 'react';
+import { 
+  ExternalLink, 
+  BookOpen, 
+  Layers, 
+  BarChart2, 
+  TrendingUp, 
+  ArrowRight,
+  ZoomIn
+} from 'lucide-react';
+import { analyticsProjects, type AnalyticsProject } from '../data';
+import ProjectModal from './ProjectModal';
+import ImageLightbox from './ImageLightbox';
 
 export default function Projects() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Static initial projects if DB is empty
-  const staticProjects = [
-    {
-      id: '1',
-      title: 'Sales Dashboard',
-      typeOfWork: 'Business Analysis',
-      tools: 'Excel, Power BI',
-      problem: 'Lack of tracking salesperson performance based on region and revenue. Incomplete sale reports and missing category data.',
-      solution: 'Rebuilt sale data master tables, performed data cleaning (removing symbols, fixing formats), and developed an interactive dashboard to track key metrics.',
-      imageUrl: 'https://images.unsplash.com/photo-1551288049-bbda38a5f850?auto=format&fit=crop&q=80&w=800'
-    },
-    {
-      id: '2',
-      title: 'Sales & Profit Analysis',
-      typeOfWork: 'Business Analysis',
-      tools: 'Excel, Power BI',
-      problem: 'Lack of profit tracking and incomplete product info, making it difficult to analyze margins and performance.',
-      solution: 'Created a product master table with cost and price, cleaned numeric formats, and built a dedicated Sales and Profit dashboard.',
-      imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800'
-    },
-    {
-      id: '3',
-      title: 'Sales & Profit Dashboard',
-      typeOfWork: 'Business Analysis',
-      tools: 'Excel',
-      problem: 'Lack of sale tracking by category and customer. Difficulty in determining top states and customer contributions.',
-      solution: 'Built a sale master table including customer and state data, and created an Excel-based Sales & Profit category dashboard.',
-      imageUrl: 'https://images.unsplash.com/photo-1543286386-713bdd548da4?auto=format&fit=crop&q=80&w=800'
-    },
-    {
-      id: '4',
-      title: 'Hospital Feedback Automation',
-      typeOfWork: 'Medical Analysis',
-      tools: 'Excel, Python',
-      problem: 'Inefficient tracking of staff performance and patient complaints leading to declining patient volume.',
-      solution: 'Built an automated feedback form for In-patients and Out-patients, synchronized across hospital departments for proper analysis.',
-      imageUrl: 'https://images.unsplash.com/photo-1527613426441-4da17471b66d?auto=format&fit=crop&q=80&w=800'
-    },
-    {
-       id: '5',
-       title: 'Logistics Tracking System',
-       typeOfWork: 'Logistics Analysis',
-       tools: 'Excel, Python, Power BI',
-       problem: 'Inefficiency in delivery staff performance and lack of tracking for customer delivery and operational costs.',
-       solution: 'Conducted analysis on delivery optimization/fuel cost using Python. Implemented a tracking system that reduced customer complaints.',
-       imageUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=800'
-    },
-    {
-      id: '6',
-      title: 'E-Commerce Finance Monitoring',
-      typeOfWork: 'Business Analysis',
-      tools: 'Excel, Python, Power BI, SQL',
-      problem: 'Improper account monitoring causing lack of balance clarity and missing customer database generation.',
-      solution: 'Performed full financial analysis across departments, automated Excel sheets for audit teams, and created approval stages for finance monitoring.',
-      imageUrl: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=800'
-    }
-  ];
-
-  useEffect(() => {
-    async function fetchProjects() {
-      try {
-        const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Project[];
-        setProjects(data.length > 0 ? data : staticProjects);
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-        setProjects(staticProjects);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchProjects();
-  }, []);
+  const [selectedProject, setSelectedProject] = useState<AnalyticsProject | null>(null);
+  const [activeLightboxImage, setActiveLightboxImage] = useState<{ url: string; caption: string; title: string } | null>(null);
 
   return (
-    <section id="projects" className="container px-6 mx-auto scroll-mt-20">
-      <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
+    <section id="projects" className="container px-6 mx-auto scroll-mt-24">
+      {/* Section Header */}
+      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">PROJECT SHOWCASE</h2>
-          <p className="mt-4 text-slate-600 dark:text-slate-400">
-            A selection of my recent analytical projects and business solutions.
+          <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+            <BarChart2 className="h-4 w-4" />
+            Verified Case Studies & Dashboards
+          </div>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
+            Data Analytics Projects
+          </h2>
+          <p className="mt-3 max-w-2xl text-slate-600 dark:text-slate-400">
+            End-to-end business intelligence dashboards, commercial data modeling, and automated KPI analytics across FMCG, Banking, Healthcare, and Logistics.
           </p>
         </div>
       </div>
 
+      {/* Projects Grid */}
       <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project, index) => (
-          <motion.div
+        {analyticsProjects.map((project, index) => (
+          <article
             key={project.id}
-            whileInView={{ opacity: 1, y: 0 }}
-            initial={{ opacity: 0, y: 20 }}
-            transition={{ delay: index * 0.1 }}
-            className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
+            id={project.id}
+            className="group flex flex-col overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-sm transition-all duration-300 hover:border-blue-500 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-500"
           >
-            <div className="relative aspect-video overflow-hidden">
+            {/* Screenshot Header with Hover Zoom & Quick Lightbox */}
+            <div className="relative aspect-video w-full overflow-hidden bg-slate-950">
               <img
-                src={project.imageUrl}
+                src={project.primaryImage}
                 alt={project.title}
-                className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                loading="lazy"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
-              <div className="absolute top-4 left-4">
-                 <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-blue-600 backdrop-blur dark:bg-slate-900/90">
-                    {project.typeOfWork}
-                 </span>
+              
+              {/* Category Pill */}
+              <div className="absolute top-3 left-3">
+                <span className="rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md dark:bg-slate-950/90">
+                  {project.typeOfWork}
+                </span>
               </div>
+
+              {/* Quick Zoom Button */}
+              <button
+                onClick={() => setActiveLightboxImage({
+                  url: project.primaryImage,
+                  caption: project.gallery[0]?.caption || project.title,
+                  title: project.title
+                })}
+                className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/60 text-white backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600"
+                aria-label="Enlarge screenshot"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </button>
             </div>
-            
-            <div className="flex flex-1 flex-col p-6">
-              <h3 className="text-xl font-bold dark:text-white">{project.title}</h3>
-              <div className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                 <Layers className="h-4 w-4" />
-                 <span>{project.tools}</span>
+
+            {/* Card Content */}
+            <div className="flex flex-1 flex-col p-6 sm:p-7">
+              {/* Client & Tools */}
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
+                <span>{project.client}</span>
+                <span className="text-blue-600 dark:text-blue-400 font-bold">Project 0{index + 1}</span>
               </div>
-              <p className="mt-4 line-clamp-3 text-slate-600 dark:text-slate-400">
+
+              <h3 className="text-xl font-bold text-slate-900 group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400 transition-colors">
+                {project.title}
+              </h3>
+
+              <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                 {project.problem}
               </p>
-              
-              <div className="mt-auto pt-6">
-                <a
-                  href={`/project/${project.id}`}
-                  className="inline-flex items-center gap-2 font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+
+              {/* Tools Tags */}
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {project.tools.slice(0, 3).map((tool, i) => (
+                  <span
+                    key={i}
+                    className="rounded-md border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    {tool}
+                  </span>
+                ))}
+                {project.tools.length > 3 && (
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    +{project.tools.length - 3}
+                  </span>
+                )}
+              </div>
+
+              {/* Key Metric Highlight */}
+              {project.keyMetrics[0] && (
+                <div className="mt-5 rounded-xl bg-blue-50/60 p-3 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30">
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-blue-700 dark:text-blue-300">
+                    {project.keyMetrics[0].label}
+                  </p>
+                  <p className="text-lg font-extrabold text-slate-900 dark:text-white">
+                    {project.keyMetrics[0].value}
+                  </p>
+                </div>
+              )}
+
+              {/* Actions Footer */}
+              <div className="mt-auto pt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-800/80">
+                <button
+                  onClick={() => setSelectedProject(project)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400 transition cursor-pointer"
                 >
                   View Details
-                  <ExternalLink className="h-4 w-4" />
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+
+                <a
+                  href={project.mediumUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-600 dark:bg-slate-800 dark:hover:bg-blue-600 transition shadow-2xs"
+                >
+                  <BookOpen className="h-3.5 w-3.5" />
+                  Read on Medium
+                  <ExternalLink className="h-3 w-3 opacity-70" />
                 </a>
               </div>
             </div>
-          </motion.div>
+          </article>
         ))}
       </div>
+
+      {/* Project Details Modal */}
+      {selectedProject && (
+        <ProjectModal
+          isOpen={selectedProject !== null}
+          onClose={() => setSelectedProject(null)}
+          project={selectedProject}
+          type="analytics"
+        />
+      )}
+
+      {/* Lightbox Preview */}
+      {activeLightboxImage && (
+        <ImageLightbox
+          isOpen={activeLightboxImage !== null}
+          onClose={() => setActiveLightboxImage(null)}
+          imageUrl={activeLightboxImage.url}
+          caption={activeLightboxImage.caption}
+          title={activeLightboxImage.title}
+        />
+      )}
     </section>
   );
 }
