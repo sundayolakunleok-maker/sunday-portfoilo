@@ -1,36 +1,30 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { db } from '../lib/firebase';
-import { collection, query, orderBy, getDocs, doc, getDocFromServer } from 'firebase/firestore';
 import Hero from '../components/Hero';
 import About from '../components/About';
 import Skills from '../components/Skills';
 import Projects from '../components/Projects';
+import SoftwareShowcase from '../components/SoftwareShowcase';
+import ProgramPortfolio from '../components/ProgramPortfolio';
 import Experience from '../components/Experience';
+import Certifications from '../components/Certifications';
+import ResumeSection from '../components/ResumeSection';
 import Contact from '../components/Contact';
 
-export default function Home() {
-  useEffect(() => {
-    async function testConnection() {
-      try {
-        // Just a test to ensure Firebase is reachable
-        await getDocFromServer(doc(db, 'test', 'connection'));
-      } catch (error: any) {
-        if (error.message?.includes('offline')) {
-          console.error("Firebase is offline. Check your configuration.");
-        }
-      }
-    }
-    testConnection();
-  }, []);
+interface HomeProps {
+  onNavigateToCourse?: () => void;
+}
 
+export default function Home({ onNavigateToCourse }: HomeProps) {
   return (
-    <div className="flex flex-col gap-20 pb-20">
+    <div className="flex flex-col gap-24 pb-20">
       <Hero />
       <About />
       <Skills />
       <Projects />
+      <SoftwareShowcase />
+      <ProgramPortfolio onNavigateToCourse={onNavigateToCourse} />
       <Experience />
+      <Certifications />
+      <ResumeSection />
       <Contact />
     </div>
   );

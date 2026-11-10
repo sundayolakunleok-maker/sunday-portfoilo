@@ -1,26 +1,8 @@
-import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { GraduationCap, Award } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { profile } from '../data';
 
 export default function About() {
-  const [bio, setBio] = useState(`I am Sunday Okegbemi, a results-driven Data Analyst with over 5 years of experience transforming complex data into actionable insights across FMCG, Banking, E-Commerce, Logistics & Procurement, and Healthcare.
-  
-  I specialize in turning raw data into clear reports, dashboards, and models that support smarter, data-driven decision-making in fast-paced environments. My work often involves data cleaning, exploratory analysis, and building interactive dashboards.`);
-
-  useEffect(() => {
-    async function fetchBio() {
-      const docRef = doc(db, 'profile', 'main');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.bio) setBio(data.bio);
-      }
-    }
-    fetchBio();
-  }, []);
-
   const certifications = [
     "Certificate in Data science (UniAthena/Cambridge)",
     "Certificate in Python Programming (UniAthena/Cambridge)",
@@ -39,7 +21,7 @@ export default function About() {
         >
           <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">About Me</h2>
           <div className="mt-6 space-y-4 text-lg leading-relaxed text-slate-600 dark:text-slate-400 whitespace-pre-line">
-            <p>{bio}</p>
+            <p>{profile.bio}</p>
           </div>
           
           <div className="mt-10 flex items-start gap-4">
