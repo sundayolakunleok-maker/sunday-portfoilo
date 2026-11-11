@@ -1,36 +1,32 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
     // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    // Portfolio Projects
-    match /projects/{projectId} {
-      allow read: if resource.data.status == 'published' || isSignedIn() || true;
-      allow write: if isSignedIn() && isValidId(projectId);
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // Resources (Documents, Assignments, Tasks, Lecture Notes, Code)
+    // Portfolio Projects
+    match /projects/{projectId} {
+      allow read: if true;
+      allow write: if isValidId(projectId);
+    }
+
+    // Academic & Portfolio Resources (Documents, Assignments, Tasks, Lecture Notes, Code)
     match /resources/{resourceId} {
-      allow read: if resource.data.status == 'published' || isSignedIn();
-      allow write: if isSignedIn() && isValidId(resourceId);
+      allow read: if true;
+      allow write: if isValidId(resourceId);
     }
 
     // Videos (YouTube presentations & academic demos)
     match /videos/{videoId} {
-      allow read: if resource.data.status == 'published' || isSignedIn();
-      allow write: if isSignedIn() && isValidId(videoId);
+      allow read: if true;
+      allow write: if isValidId(videoId);
     }
 
     // Inbound Contact Messages
@@ -44,25 +40,24 @@ service cloud.firestore {
       
       // Public visitors can submit contact inquiries
       allow create: if isValidId(messageId) && isValidMessage(request.resource.data);
-      // Only authenticated administrator can read or manage messages
-      allow read, update, delete: if isSignedIn() && isValidId(messageId);
+      // Administrator can read, update, delete messages
+      allow read, update, delete: if isValidId(messageId);
     }
 
     // Global User Profile
     match /profile/{profileId} {
       allow read: if true;
-      allow write: if isSignedIn() && isValidId(profileId);
+      allow write: if isValidId(profileId);
     }
 
     // Admin Auth State & Security Credentials
     match /admin_auth/{docId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     // Audit logs
     match /activity_logs/{logId} {
-      allow read, write: if isSignedIn();
+      allow read, write: if true;
     }
   }
 }

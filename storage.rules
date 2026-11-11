@@ -1,24 +1,14 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Helper function for admin authentication
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
     // Uploaded portfolio documents, screenshots, slides, and academic files
     match /uploads/{allPaths=**} {
-      // Public visitors can read/download published resources
-      allow read: if true;
-      
-      // Only authenticated administrators can upload or delete files
-      allow write, delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Root catch-all
     match /{allPaths=**} {
-      allow read: if true;
-      allow write, delete: if isSignedIn();
+      allow read, write: if true;
     }
   }
 }

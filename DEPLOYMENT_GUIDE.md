@@ -39,8 +39,8 @@ As assignments and discussion prompts are released throughout the semester:
 1. In AI Studio, click **Settings** (bottom left) > **Export to GitHub**.
 2. Push or merge changes to your GitHub repository (e.g., `sunday-okegbemi-portfolio`).
 3. Log in to [Netlify.com](https://netlify.com) using your GitHub account.
-4. If your site `https://eclectic-malabi-7933bf.netlify.app` is already connected, Netlify will **automatically rebuild and publish** the new MIT 624 page within seconds.
-5. `public/_redirects` is already included so direct URLs like `https://eclectic-malabi-7933bf.netlify.app/mit-624` work seamlessly on page refresh!
+4. If your site `https://okegbemisunday.netlify.app` is already connected, Netlify will **automatically rebuild and publish** the new MIT 624 page within seconds.
+5. `public/_redirects` is already included so direct URLs like `https://okegbemisunday.netlify.app/mit-624` work seamlessly on page refresh!
 
 ---
 
