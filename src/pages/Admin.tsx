@@ -677,8 +677,7 @@ export default function Admin({ onLogout, onNavigateHome, onNavigateCourse }: Ad
     { id: 'account', label: 'Account Settings', icon: UserCog },
     { id: 'security', label: 'Security Settings', icon: ShieldAlert },
   ];
-
-  return (
+return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-blue-600 selection:text-white">
       
       {/* Top Bar Header */}
@@ -695,10 +694,64 @@ export default function Admin({ onLogout, onNavigateHome, onNavigateCourse }: Ad
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Logged in as <strong className="text-blue-400">{session?.username || 'Olakunle'}</strong>
+              Logged in as <strong className="text-blue-400">{session?.username || auth.currentUser?.email || 'Olakunle'}</strong>
             </p>
           </div>
         </div>
+
+        {/* Global Platform Switcher */}
+        <div className="hidden md:flex items-center gap-1 rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs">
+          <button
+            onClick={() => setPlatformFilter('all')}
+            className={`rounded-lg px-3 py-1 font-semibold transition-all cursor-pointer ${
+              platformFilter === 'all' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            All Platforms
+          </button>
+          <button
+            onClick={() => setPlatformFilter('portfolio')}
+            className={`rounded-lg px-3 py-1 font-semibold transition-all cursor-pointer ${
+              platformFilter === 'portfolio' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Portfolio Only
+          </button>
+          <button
+            onClick={() => setPlatformFilter('mit624')}
+            className={`rounded-lg px-3 py-1 font-semibold transition-all cursor-pointer ${
+              platformFilter === 'mit624' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            MIT 624 Only
+          </button>
+        </div>
+
+        {/* Quick External Actions */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onNavigateHome}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+          >
+            <Globe className="h-3.5 w-3.5 text-blue-400" />
+            View Public Site
+          </button>
+          <button
+            onClick={onNavigateCourse}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+          >
+            <GraduationCap className="h-3.5 w-3.5 text-purple-400" />
+            MIT 624 Page
+          </button>
+          <button
+            onClick={handleLogoutClick}
+            className="flex items-center gap-1.5 rounded-xl bg-red-600/20 border border-red-500/30 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-600 hover:text-white transition-colors cursor-pointer"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Logout
+          </button>
+        </div>
+      </header>
 
         {/* Global Platform Switcher */}
         <div className="hidden md:flex items-center gap-1 rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs">
