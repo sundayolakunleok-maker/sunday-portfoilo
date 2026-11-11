@@ -13,22 +13,26 @@ import {
   Mail, 
   ArrowUpRight,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  ShieldCheck,
+  Youtube
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ThemeToggle from './ThemeToggle';
 import { profile } from '../data';
 
 interface NavbarProps {
-  currentPage?: 'home' | 'mit-624';
+  currentPage?: 'home' | 'mit-624' | 'login' | 'admin';
   onNavigateHome?: () => void;
   onNavigateCourse?: () => void;
+  onNavigateAdmin?: () => void;
 }
 
 export default function Navbar({
   currentPage = 'home',
   onNavigateHome,
-  onNavigateCourse
+  onNavigateCourse,
+  onNavigateAdmin
 }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -288,13 +292,40 @@ export default function Navbar({
         </nav>
 
         {/* Right CTA Actions (Inspired by reference site) */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-2.5">
           <ThemeToggle />
+
+          {/* YouTube Channel Link */}
+          <a
+            href="https://www.youtube.com/@OLAKUNLEokegbemi"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 hover:text-red-600 hover:bg-red-50 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-red-400 dark:hover:bg-slate-800 transition"
+            title="Official YouTube: Olakunle Data"
+          >
+            <Youtube className="h-4 w-4" />
+          </a>
+
+          {/* Admin Portal Button */}
+          <a
+            href="/login"
+            onClick={(e) => {
+              if (onNavigateAdmin) {
+                e.preventDefault();
+                onNavigateAdmin();
+              }
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:text-blue-600 hover:border-blue-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white transition cursor-pointer"
+            title="Admin Control Centre"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
+            <span>Admin</span>
+          </a>
           
           <a
             href="#contact"
             onClick={() => handleLinkClick('#contact')}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-600 dark:bg-white dark:text-slate-900 dark:hover:bg-blue-600 dark:hover:text-white transition active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition active:scale-95 cursor-pointer"
           >
             <Mail className="h-3.5 w-3.5" />
             <span>Contact Me</span>
@@ -432,9 +463,33 @@ export default function Navbar({
             </a>
 
             <a
+              href="#youtube"
+              onClick={() => handleLinkClick('#youtube')}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+            >
+              <Youtube className="h-4 w-4" />
+              YouTube: Olakunle Data
+            </a>
+
+            <a
+              href="/login"
+              onClick={(e) => {
+                setIsMobileMenuOpen(false);
+                if (onNavigateAdmin) {
+                  e.preventDefault();
+                  onNavigateAdmin();
+                }
+              }}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Admin Control Centre
+            </a>
+
+            <a
               href="#contact"
               onClick={() => handleLinkClick('#contact')}
-              className="block rounded-xl px-3 py-2 text-sm font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800"
+              className="block rounded-xl px-3 py-2 text-sm font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800"
             >
               Contact Me / Hire Me
             </a>

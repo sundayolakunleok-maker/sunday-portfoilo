@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Uploaded portfolio documents, screenshots, slides, and academic files
+    match /uploads/{allPaths=**} {
+      allow read, write: if true;
+    }
+
+    // Root catch-all
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}

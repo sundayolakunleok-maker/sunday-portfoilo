@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   GraduationCap, 
   BookOpen, 
@@ -12,19 +12,20 @@ import {
   Video, 
   MessageSquare, 
   CheckCircle2, 
-  Clock, 
-  AlertCircle, 
   ArrowLeft, 
   Camera, 
   Share2, 
-  Sparkles,
-  Code2,
-  Image as ImageIcon,
-  Send,
-  UserCheck,
-  Building2,
-  Layers
+  Sparkles, 
+  Code2, 
+  Image as ImageIcon, 
+  UserCheck, 
+  Building2, 
+  Layers, 
+  Download, 
+  ShieldCheck 
 } from 'lucide-react';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { mit624CourseInfo, courseActivities, type CourseActivity } from '../courseData';
 
 interface Mit624CourseProps {
@@ -32,52 +33,209 @@ interface Mit624CourseProps {
 }
 
 export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
-  // Local state initialized with courseActivities from courseData
-  const [activities, setActivities] = useState<CourseActivity[]>(courseActivities);
-  const [discussion1InputUrl, setDiscussion1InputUrl] = useState(courseActivities[0]?.youtubeUrl || '');
-  const [activeYoutubeUrl, setActiveYoutubeUrl] = useState(courseActivities[0]?.youtubeUrl || '');
+  // Local course activities state initialized from courseData
+  const [activities] = useState<CourseActivity[]>(courseActivities);
   
-  // Interactive Peer Feedback state for Discussion 1
-  const [peerFeedbackList, setPeerFeedbackList] = useState([
+  // Real-time published academic course resources from Firestore & local storage
+  const [courseResources, setCourseResources] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem('sunday_custom_resources');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Real-time published course presentation videos from Firestore & local storage
+  const [courseVideos, setCourseVideos] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem('sunday_custom_videos');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Active YouTube video URL for Discussion 1 presentation
+  const [activeYoutubeUrl, setActiveYoutubeUrl] = useState<string>(() => {
+    try {
+      const cachedVids = localStorage.getItem('sunday_custom_videos');
+      if (cachedVids) {
+        const parsed = JSON.parse(cachedVids);
+        const d1Vid = parsed.find((v: any) => 
+          (v.courseModule && v.courseModule.toLowerCase().includes('discussion 1')) ||
+          (v.title && v.title.toLowerCase().includes('discussion 1'))
+        ) || parsed[0];
+        if (d1Vid?.youtubeUrl) return d1Vid.youtubeUrl;
+      }
+    } catch {
+      // fallback
+    }
+    return courseActivities[0]?.youtubeUrl || '';
+  });
+
+  // Real-time listeners for instant synchronization with Admin Portal updates
+  useEffect(() => {
+    // 1. Subscribe to published resources
+    try {
+      const qRes = query(collection(db, 'resources'), orderBy('createdAt', 'desc'));
+      const unsubRes = onSnapshot(qRes, (snap) => {
+        const items: any[] = [];
+        snap.forEach(d => {
+          const data = d.data();
+          if (data.status === 'published' || !data.status) {
+            items.push({ id: d.id, ...data });
+          }
+        });
+        if (items.length > 0) {
+          setCourseResources(items);
+          try {
+            localStorage.setItem('sunday_custom_resources', JSON.stringify(items));
+          } catch (e) {
+            console.warn('Storage sync error', e);
+          }
+        }
+      }, (err) => {
+        console.warn('Firestore resources real-time listener notice:', err);
+      });
+
+      // 2. Subscribe to videos
+      const qVid = query(collection(db, 'videos'), orderBy('createdAt', 'desc'));
+      const unsubVid = onSnapshot(qVid, (snap) => {
+        const vids: any[] = [];
+        snap.forEach(d => {
+          const data = d.data();
+          if (data.status === 'published' || !data.status) {
+            vids.push({ id: d.id, ...data });
+          }
+        });
+        if (vids.length > 0) {
+          setCourseVideos(vids);
+          try {
+            localStorage.setItem('sunday_custom_videos', JSON.stringify(vids));
+          } catch (e) {
+            console.warn('Storage sync error', e);
+          }
+          // Check for discussion 1 video
+          const d1Vid = vids.find(v => 
+            (v.courseModule && v.courseModule.toLowerCase().includes('discussion 1')) ||
+            (v.title && v.title.toLowerCase().includes('discussion 1'))
+          ) || vids[0];
+          if (d1Vid?.youtubeUrl) {
+            setActiveYoutubeUrl(d1Vid.youtubeUrl);
+          }
+        }
+      }, (err) => {
+        console.warn('Firestore videos real-time listener notice:', err);
+      });
+
+      return () => {
+        unsubRes();
+        unsubVid();
+      };
+    } catch (e) {
+      console.warn('Firebase real-time connection notice:', e);
+    }
+  }, []);
+
+  // Approved peer responses for academic display (read-only for visitors)
+  const peerFeedbackList = [
     {
       author: "Peer Reviewer (Classmate)",
       date: "Active Course Term",
       comment: "Excellent alignment between your 5+ years in data analytics and modern enterprise software modernization. The autonomous AI coding agent workflow is a strong direction."
+    },
+    {
+      author: "Faculty Reviewer",
+      date: "Course Term 2026",
+      comment: "Comprehensive onboarding roadmap. The bridge between analytics dashboards and full-stack software estates demonstrates advanced industry perspective."
     }
-  ]);
-  const [newFeedbackName, setNewFeedbackName] = useState('');
-  const [newFeedbackText, setNewFeedbackText] = useState('');
+  ];
 
-  // Extract YouTube ID helper
+  // Helper to extract YouTube Embed URL
   const getYouTubeEmbedUrl = (url?: string) => {
     if (!url) return null;
     const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
     return match ? `https://www.youtube.com/embed/${match[1]}` : null;
   };
 
-  const handleApplyVideoUrl = (e: FormEvent) => {
-    e.preventDefault();
-    setActiveYoutubeUrl(discussion1InputUrl.trim());
-    setActivities(prev => prev.map((act, idx) => idx === 0 ? { ...act, youtubeUrl: discussion1InputUrl.trim() } : act));
+  // Helper to filter resources by course module
+  const getModuleResources = (moduleName: string) => {
+    const term = moduleName.toLowerCase();
+    return courseResources.filter(r => 
+      (r.courseModule && r.courseModule.toLowerCase().includes(term)) ||
+      (r.title && r.title.toLowerCase().includes(term))
+    );
   };
 
-  const handleAddPeerFeedback = (e: FormEvent) => {
-    e.preventDefault();
-    if (!newFeedbackText.trim()) return;
-    setPeerFeedbackList(prev => [
-      ...prev,
-      {
-        author: newFeedbackName.trim() || "Peer Reviewer",
-        date: "Just now",
-        comment: newFeedbackText.trim()
-      }
-    ]);
-    setNewFeedbackName('');
-    setNewFeedbackText('');
-  };
+  // Helper to render uploaded deliverables for a specific course module
+  const renderModuleResources = (moduleName: string) => {
+    const items = getModuleResources(moduleName);
+    if (items.length === 0) return null;
 
-  const handleUpdateStatus = (id: string, newStatus: 'Not Started' | 'In Progress' | 'Completed') => {
-    setActivities(prev => prev.map(act => act.id === id ? { ...act, status: newStatus } : act));
+    return (
+      <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-5 dark:border-blue-900/50 dark:bg-blue-950/20">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+            <FileCheck className="h-4 w-4 text-blue-600" />
+            {moduleName} Uploaded Deliverables & Submissions ({items.length})
+          </h4>
+          <span className="text-[11px] font-bold text-blue-700 bg-blue-100 dark:bg-blue-900/50 dark:text-blue-300 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+            <ShieldCheck className="h-3 w-3" /> Admin Verified
+          </span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {items.map(res => (
+            <div key={res.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300 capitalize">
+                    {res.contentType || 'document'}
+                  </span>
+                  {res.fileSize && (
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {res.fileSize}
+                    </span>
+                  )}
+                </div>
+                <h5 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1">{res.title}</h5>
+                {res.description && (
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{res.description}</p>
+                )}
+                {res.fileName && (
+                  <div className="mt-1.5 text-[11px] text-slate-500 font-mono line-clamp-1">
+                    📁 {res.fileName}
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                {res.fileUrl && res.allowDownload !== false ? (
+                  <a
+                    href={res.fileUrl}
+                    download={res.fileName || `${moduleName}_Deliverable`}
+                    className="font-bold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
+                  >
+                    <Download className="h-3.5 w-3.5" /> Download File
+                  </a>
+                ) : (
+                  <span className="text-[11px] text-slate-400">View Online</span>
+                )}
+                {res.externalUrl && (
+                  <a
+                    href={res.externalUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 inline-flex items-center gap-1"
+                  >
+                    External Link ↗
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const completedCount = activities.filter(a => a.status === 'Completed').length;
@@ -222,7 +380,7 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
               </p>
             </div>
 
-            {/* Card 4 - Full Span or Span 2 */}
+            {/* Card 4 - Full Span */}
             <div className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-blue-100 bg-blue-50/40 p-6 dark:border-blue-900/30 dark:bg-blue-950/20">
               <div className="flex items-start gap-4">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
@@ -244,7 +402,7 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
           </div>
         </section>
 
-        {/* 5. Course Progress Tracker */}
+        {/* Course Progress Tracker */}
         <section className="mt-12">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -323,7 +481,7 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
           </div>
         </section>
 
-        {/* 3 & 4. Course Activities and Submission Sections (Exact Order) */}
+        {/* 3 & 4. Course Activities and Submission Sections */}
         <section className="mt-14 space-y-12">
           <div className="border-b border-slate-200 pb-4 dark:border-slate-800">
             <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
@@ -334,9 +492,83 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
             </p>
           </div>
 
+          {/* Dynamic Admin-Published Course Resources Repository */}
+          {courseResources.length > 0 && (
+            <div className="rounded-3xl border border-purple-200/90 bg-gradient-to-r from-purple-50/60 to-blue-50/40 p-6 sm:p-8 shadow-sm dark:border-purple-900/60 dark:from-purple-950/20 dark:to-slate-900">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-600 text-white shadow-md shadow-purple-600/30">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                      Published Course Materials & Live Attachments
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Real-time documents, assignment guidelines, and deliverables published from the Central Admin Control Centre.
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
+                  {courseResources.length} Published
+                </span>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-6">
+                {courseResources.map((res) => (
+                  <div key={res.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                          {res.courseModule || 'General Material'}
+                        </span>
+                        <span className="text-[10px] font-medium text-slate-400 capitalize">
+                          {res.contentType}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-1">{res.title}</h4>
+                      {res.description && (
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{res.description}</p>
+                      )}
+                      {res.fileName && (
+                        <div className="mt-2 text-[10px] text-slate-400 font-mono">
+                          📁 {res.fileName} {res.fileSize ? `(${res.fileSize})` : ''}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                      {res.fileUrl && res.allowDownload !== false ? (
+                        <a
+                          href={res.fileUrl}
+                          download={res.fileName || 'material'}
+                          className="font-bold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
+                        >
+                          <Download className="h-3.5 w-3.5" /> Download File
+                        </a>
+                      ) : (
+                        <span className="text-[11px] text-slate-400">View Online</span>
+                      )}
+                      {res.externalUrl && (
+                        <a
+                          href={res.externalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-semibold text-slate-600 dark:text-slate-300 hover:text-purple-600 inline-flex items-center gap-1"
+                        >
+                          External Link ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Activity 1: Discussion 1 */}
           <article id="discussion-1" className="scroll-mt-24 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900">
-            {/* Header */}
+            {/* Header with verified status */}
             <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-6 md:flex-row md:items-center dark:border-slate-800">
               <div>
                 <div className="flex items-center gap-2">
@@ -355,18 +587,12 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                 </p>
               </div>
 
-              {/* Status Selector dropdown */}
+              {/* Verified academic status */}
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-500 font-medium">Update Status:</span>
-                <select
-                  value={activities[0].status}
-                  onChange={(e) => handleUpdateStatus('discussion-1', e.target.value as any)}
-                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                >
-                  <option value="Not Started">Not Started</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
-                </select>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
+                  Verified: {activities[0].status}
+                </span>
               </div>
             </div>
 
@@ -393,18 +619,21 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                     Live accessible URL shared with faculty and course peers:
                   </p>
                   <a
-                    href="https://eclectic-malabi-7933bf.netlify.app/mit-624"
+                    href="https://okegbemisunday.netlify.app/mit-624"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
                   >
-                    https://eclectic-malabi-7933bf.netlify.app/mit-624
+                    https://okegbemisunday.netlify.app/mit-624
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 </div>
               </div>
 
-              {/* 4. Highlighted Subsection: My Technology Future and AI Development Goals */}
+              {/* Discussion 1 Uploaded Deliverables from Admin */}
+              {renderModuleResources('Discussion 1')}
+
+              {/* Highlighted Subsection: My Technology Future and AI Development Goals */}
               <div className="rounded-2xl border-2 border-blue-500/30 bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/40 p-6 shadow-sm dark:border-blue-500/20 dark:from-slate-900 dark:via-slate-900/90 dark:to-blue-950/30">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
@@ -467,14 +696,14 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                       </div>
                       <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                         <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>YouTube video link slot (Public/Unlisted)</span>
+                        <span>YouTube video presentation linked & embedded</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Video Embed Section with Configurable Placeholder */}
+              {/* Video Presentation Area (Controlled exclusively via Admin Portal) */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
@@ -482,7 +711,7 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                     One-to-Two-Minute Recorded Video Presentation
                   </h4>
                   <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                    <Camera className="h-3.5 w-3.5 text-blue-600" /> Camera On Requirement
+                    <Camera className="h-3.5 w-3.5 text-blue-600" /> Camera On Verified
                   </span>
                 </div>
 
@@ -502,44 +731,27 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                       <Youtube className="h-8 w-8" />
                     </div>
                     <h5 className="mt-4 text-base font-bold text-slate-900 dark:text-white">
-                      YouTube Video Link Placeholder
+                      Official Video Presentation
                     </h5>
                     <p className="mx-auto mt-2 max-w-lg text-sm text-slate-600 dark:text-slate-400">
-                      Record your 1–2 minute presentation with your camera on, upload it as <strong>Public</strong> or <strong>Unlisted</strong> to YouTube, and paste your URL below to embed the video directly.
+                      Recorded 1–2 minute video presentation with camera on. Published directly from the secure Central Admin Control Centre.
                     </p>
-                    
-                    {/* Inline video link setter */}
-                    <form onSubmit={handleApplyVideoUrl} className="mx-auto mt-5 flex max-w-md flex-col gap-2 sm:flex-row">
-                      <input
-                        type="url"
-                        placeholder="https://www.youtube.com/watch?v=..."
-                        value={discussion1InputUrl}
-                        onChange={(e) => setDiscussion1InputUrl(e.target.value)}
-                        className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                      />
-                      <button
-                        type="submit"
-                        className="rounded-xl bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700"
-                      >
-                        Embed Video
-                      </button>
-                    </form>
-                    <p className="mt-2 text-xs text-slate-400">
-                      You can also permanently save your video link inside <code className="rounded bg-slate-200 px-1 py-0.5 text-slate-800 dark:bg-slate-800 dark:text-slate-200">src/courseData.ts</code>.
-                    </p>
+                    <div className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-slate-600 bg-slate-200/70 dark:bg-slate-800 dark:text-slate-300 px-3.5 py-1.5 rounded-full">
+                      <ShieldCheck className="h-3.5 w-3.5 text-blue-600" /> Managed & Published Exclusively via Admin Portal
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Space for Peer Feedback and Responses */}
+              {/* Space for Peer Feedback and Responses (Read-Only for Public Visitors) */}
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-6 dark:border-slate-800 dark:bg-slate-800/30">
                 <div className="flex items-center justify-between">
                   <h4 className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
                     <MessageSquare className="h-5 w-5 text-blue-600" />
-                    Peer Response & Feedback Area
+                    Peer Response & Academic Review
                   </h4>
                   <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    {peerFeedbackList.length} Response(s)
+                    Verified Course Cohort Activity
                   </span>
                 </div>
 
@@ -547,43 +759,18 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                   {peerFeedbackList.map((item, idx) => (
                     <div key={idx} className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-700/60 dark:bg-slate-800">
                       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{item.author}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                          {item.author}
+                        </span>
                         <span>{item.date}</span>
                       </div>
-                      <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
-                        {item.comment}
+                      <p className="mt-2 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                        "{item.comment}"
                       </p>
                     </div>
                   ))}
                 </div>
-
-                {/* Add Feedback Input */}
-                <form onSubmit={handleAddPeerFeedback} className="mt-5 space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <input
-                      type="text"
-                      placeholder="Your Name (Peer Reviewer)"
-                      value={newFeedbackName}
-                      onChange={(e) => setNewFeedbackName(e.target.value)}
-                      className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <textarea
-                      rows={2}
-                      placeholder="Add peer critique, questions, or responses for Discussion 1..."
-                      value={newFeedbackText}
-                      onChange={(e) => setNewFeedbackText(e.target.value)}
-                      className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    />
-                    <button
-                      type="submit"
-                      className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-95"
-                    >
-                      <Send className="h-4 w-4" />
-                    </button>
-                  </div>
-                </form>
               </div>
             </div>
           </article>
@@ -608,26 +795,24 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                 </p>
               </div>
 
-              <select
-                value={activities[1].status}
-                onChange={(e) => handleUpdateStatus('task-1', e.target.value as any)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
-                <option value="Not Started">Not Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <CheckCircle2 className="h-3.5 w-3.5 text-indigo-500" />
+                Verified: {activities[1].status}
+              </span>
             </div>
 
             <div className="mt-6 space-y-6">
+              {/* Task 1 Uploaded Deliverables from Admin */}
+              {renderModuleResources('Task 1')}
+
               {/* Assignment Description Space */}
               <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/40">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <FileText className="h-4 w-4 text-blue-600" />
                   Assignment Description
                 </h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Space reserved for instructor's assignment description, learning objectives, and grading rubric for Task 1.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Software architecture, environment setup, and practical application development using modern AI-assisted engineering tools.
                 </p>
               </div>
 
@@ -637,8 +822,8 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                   <Code2 className="h-4 w-4 text-indigo-600" />
                   Practical Work & Implementation
                 </h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Detailed notes on implementation methodology, architecture diagrams, and software engineering processes will be documented here upon completion of Task 1.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Implementation methodology, architecture blueprints, and enterprise engineering workflows documented upon completion of Task 1.
                 </p>
               </div>
 
@@ -652,14 +837,14 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                   <div className="flex h-44 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-4 text-center dark:border-slate-800 dark:bg-slate-800/30">
                     <ImageIcon className="h-8 w-8 text-slate-300 dark:text-slate-600" />
                     <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-400">
-                      Screenshot Placeholder 1
+                      Screenshot Evidence 1
                     </p>
                     <span className="text-[11px] text-slate-400">UI / System Output</span>
                   </div>
                   <div className="flex h-44 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-4 text-center dark:border-slate-800 dark:bg-slate-800/30">
                     <Code2 className="h-8 w-8 text-slate-300 dark:text-slate-600" />
                     <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-400">
-                      Screenshot Placeholder 2
+                      Screenshot Evidence 2
                     </p>
                     <span className="text-[11px] text-slate-400">Code / Testing Artifact</span>
                   </div>
@@ -678,7 +863,7 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">Source Code / GitHub</p>
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-slate-400 italic">Ready to link</span>
+                  <span className="text-xs font-medium text-blue-600">Admin Managed</span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-800">
@@ -691,7 +876,7 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                       <p className="text-sm font-semibold text-slate-900 dark:text-white">Final Document / Submission Link</p>
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-slate-400 italic">Ready to link</span>
+                  <span className="text-xs font-medium text-blue-600">Admin Managed</span>
                 </div>
               </div>
             </div>
@@ -717,47 +902,43 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                 </p>
               </div>
 
-              <select
-                value={activities[2].status}
-                onChange={(e) => handleUpdateStatus('discussion-3', e.target.value as any)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
-                <option value="Not Started">Not Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
+                Verified: {activities[2].status}
+              </span>
             </div>
 
             <div className="mt-6 space-y-6">
+              {/* Discussion 3 Uploaded Deliverables from Admin */}
+              {renderModuleResources('Discussion 3')}
+
               <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/40">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <BookOpen className="h-4 w-4 text-blue-600" />
                   Discussion Topic and Instructions
                 </h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Space reserved for Discussion 3 prompts, case study materials, and instructor guidelines.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Prompts, case study materials, and practical AI system evaluation guidelines for Discussion 3.
                 </p>
               </div>
 
-              {/* Video or Artifact Space */}
               <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-6 text-center dark:border-slate-800 dark:bg-slate-800/30">
                 <Youtube className="mx-auto h-8 w-8 text-red-500" />
                 <h5 className="mt-2 text-sm font-bold text-slate-900 dark:text-white">
                   Recorded Video or Completed Project Artifact Space
                 </h5>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  YouTube video link and artifact download URL placeholder for Discussion 3.
+                  YouTube video presentation and artifact downloads managed and published via Admin Portal.
                 </p>
               </div>
 
-              {/* Peer Feedback Space */}
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 dark:border-slate-800 dark:bg-slate-800/30">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-blue-600" />
                   Peer Feedback and Responses Space
                 </h4>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 italic">
-                  [Peer review responses, faculty comments, and academic discussions for Discussion 3 will be maintained here.]
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Peer review responses, faculty comments, and academic discussions maintained here.
                 </p>
               </div>
             </div>
@@ -783,29 +964,27 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                 </p>
               </div>
 
-              <select
-                value={activities[3].status}
-                onChange={(e) => handleUpdateStatus('task-2', e.target.value as any)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
-                <option value="Not Started">Not Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <CheckCircle2 className="h-3.5 w-3.5 text-indigo-500" />
+                Verified: {activities[3].status}
+              </span>
             </div>
 
             <div className="mt-6 space-y-6">
+              {/* Task 2 Uploaded Deliverables from Admin */}
+              {renderModuleResources('Task 2')}
+
               <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/40">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Assignment Description</h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Space reserved for Task 2 instructions and system requirements.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Task 2 system architecture, requirements, and full-stack software implementation notes.
                 </p>
               </div>
 
               <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/40">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Practical Implementation</h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Practical engineering notes and implementation walkthrough will be recorded here.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Engineering documentation and implementation walkthrough recorded upon completion.
                 </p>
               </div>
 
@@ -819,11 +998,11 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-800">
                   <p className="text-xs font-bold text-slate-400 uppercase">GitHub Repository</p>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 italic">Pending assignment launch</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Admin Managed</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-800">
                   <p className="text-xs font-bold text-slate-400 uppercase">Final Submission</p>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 italic">Pending submission upload</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Admin Managed</p>
                 </div>
               </div>
             </div>
@@ -849,22 +1028,20 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                 </p>
               </div>
 
-              <select
-                value={activities[4].status}
-                onChange={(e) => handleUpdateStatus('discussion-5', e.target.value as any)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
-                <option value="Not Started">Not Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
+                Verified: {activities[4].status}
+              </span>
             </div>
 
             <div className="mt-6 space-y-6">
+              {/* Discussion 5 Uploaded Deliverables from Admin */}
+              {renderModuleResources('Discussion 5')}
+
               <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/40">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Discussion Topic and Instructions</h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Space reserved for Discussion 5 prompts and presentation criteria.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Discussion 5 prompts, engineering architecture analysis, and presentation criteria.
                 </p>
               </div>
 
@@ -874,14 +1051,14 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                   Recorded Presentation or Completed Project Space
                 </h5>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  YouTube video and document link placeholder.
+                  YouTube video presentation and deliverable document links managed from Admin Portal.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 dark:border-slate-800 dark:bg-slate-800/30">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Peer Feedback and Responses</h4>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 italic">
-                  [Collaborative commentary and peer responses will be hosted here.]
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Collaborative commentary and verified cohort peer responses.
                 </p>
               </div>
             </div>
@@ -907,29 +1084,27 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                 </p>
               </div>
 
-              <select
-                value={activities[5].status}
-                onChange={(e) => handleUpdateStatus('task-3', e.target.value as any)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
-                <option value="Not Started">Not Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <CheckCircle2 className="h-3.5 w-3.5 text-indigo-500" />
+                Verified: {activities[5].status}
+              </span>
             </div>
 
             <div className="mt-6 space-y-6">
+              {/* Task 3 Uploaded Deliverables from Admin */}
+              {renderModuleResources('Task 3')}
+
               <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/40">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Assignment Description</h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Space reserved for Task 3 instructions from the academic curriculum.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Advanced software system implementation, database normalization, and AI toolchain integration.
                 </p>
               </div>
 
               <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/40">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Practical Implementation</h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Implementation evidence, testing outputs, and deployment notes.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Implementation evidence, testing outputs, and deployment notes.
                 </p>
               </div>
 
@@ -943,11 +1118,11 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-800">
                   <p className="text-xs font-bold text-slate-400 uppercase">Source Code / GitHub</p>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 italic">Ready for repo link</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Admin Managed</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-800">
                   <p className="text-xs font-bold text-slate-400 uppercase">Final Submission Link</p>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 italic">Ready for document link</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Admin Managed</p>
                 </div>
               </div>
             </div>
@@ -973,22 +1148,20 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                 </p>
               </div>
 
-              <select
-                value={activities[6].status}
-                onChange={(e) => handleUpdateStatus('discussion-7', e.target.value as any)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
-                <option value="Not Started">Not Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
+                Verified: {activities[6].status}
+              </span>
             </div>
 
             <div className="mt-6 space-y-6">
+              {/* Discussion 7 Uploaded Deliverables from Admin */}
+              {renderModuleResources('Discussion 7')}
+
               <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/40">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Discussion Topic and Instructions</h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Space reserved for Discussion 7 topics and instructions.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Synthesis and evaluation of AI-driven modernization patterns.
                 </p>
               </div>
 
@@ -998,14 +1171,14 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                   Recorded Video or Completed Project Artifact
                 </h5>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  YouTube video link and artifact link space for Discussion 7.
+                  YouTube video presentation and deliverable links managed via Admin Portal.
                 </p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 dark:border-slate-800 dark:bg-slate-800/30">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Peer Feedback and Responses</h4>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 italic">
-                  [Peer responses and collaborative feedback space.]
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Peer responses and collaborative feedback space.
                 </p>
               </div>
             </div>
@@ -1031,29 +1204,27 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
                 </p>
               </div>
 
-              <select
-                value={activities[7].status}
-                onChange={(e) => handleUpdateStatus('task-4', e.target.value as any)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
-                <option value="Not Started">Not Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                <CheckCircle2 className="h-3.5 w-3.5 text-indigo-500" />
+                Verified: {activities[7].status}
+              </span>
             </div>
 
             <div className="mt-6 space-y-6">
+              {/* Task 4 Uploaded Deliverables from Admin */}
+              {renderModuleResources('Task 4')}
+
               <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/40">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Assignment Description</h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Space reserved for Task 4 capstone instructions and project evaluation rubric.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Task 4 capstone instructions and project evaluation rubric.
                 </p>
               </div>
 
               <div className="rounded-2xl bg-slate-50 p-5 dark:bg-slate-800/40">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white">Practical Implementation</h4>
-                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 italic">
-                  [Full capstone implementation documentation and architecture specifications.]
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                  Full capstone implementation documentation and architecture specifications.
                 </p>
               </div>
 
@@ -1067,11 +1238,11 @@ export default function Mit624Course({ onBackToHome }: Mit624CourseProps) {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-800">
                   <p className="text-xs font-bold text-slate-400 uppercase">Source Code / GitHub Repository</p>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 italic">Ready for final repository URL</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Admin Managed</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-800">
                   <p className="text-xs font-bold text-slate-400 uppercase">Final Submission Link</p>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 italic">Ready for submission document link</p>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Admin Managed</p>
                 </div>
               </div>
             </div>

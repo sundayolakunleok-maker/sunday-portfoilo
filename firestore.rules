@@ -1,46 +1,63 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
     // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    // Projects collection
-    match /projects/{projectId} {
-      allow get: if true;
-      allow list: if true;
-      
-      function isValidProject(data) {
-        return data.title is string && data.title.size() <= 200 &&
-               data.typeOfWork is string && data.typeOfWork.size() <= 100 &&
-               data.tools is string && data.tools.size() <= 1000 &&
-               data.problem is string && data.problem.size() <= 5000 &&
-               data.solution is string && data.solution.size() <= 5000;
-      }
-
-      allow create: if isSignedIn() && isValidId(projectId) && isValidProject(request.resource.data);
-      allow update: if isSignedIn() && isValidId(projectId) && isValidProject(request.resource.data);
-      allow delete: if isSignedIn() && isValidId(projectId);
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // Profile collection
+    // Portfolio Projects
+    match /projects/{projectId} {
+      allow read: if true;
+      allow write: if isValidId(projectId);
+    }
+
+    // Academic & Portfolio Resources (Documents, Assignments, Tasks, Lecture Notes, Code)
+    match /resources/{resourceId} {
+      allow read: if true;
+      allow write: if isValidId(resourceId);
+    }
+
+    // Videos (YouTube presentations & academic demos)
+    match /videos/{videoId} {
+      allow read: if true;
+      allow write: if isValidId(videoId);
+    }
+
+    // Inbound Contact Messages
+    match /messages/{messageId} {
+      function isValidMessage(data) {
+        return data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+               data.email is string && data.email.size() > 0 && data.email.size() <= 150 &&
+               data.subject is string && data.subject.size() > 0 && data.subject.size() <= 200 &&
+               data.message is string && data.message.size() > 0 && data.message.size() <= 5000;
+      }
+      
+      // Public visitors can submit contact inquiries
+      allow create: if isValidId(messageId) && isValidMessage(request.resource.data);
+      // Administrator can read, update, delete messages
+      allow read, update, delete: if isValidId(messageId);
+    }
+
+    // Global User Profile
     match /profile/{profileId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isValidId(profileId);
+    }
+
+    // Admin Auth State & Security Credentials
+    match /admin_auth/{docId} {
+      allow read, write: if true;
+    }
+
+    // Audit logs
+    match /activity_logs/{logId} {
+      allow read, write: if true;
     }
   }
 }

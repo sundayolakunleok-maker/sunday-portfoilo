@@ -78,7 +78,7 @@ export const courseActivities: CourseActivity[] = [
     instructions: "Record a 1-to-2 minute presentation with your camera on reflecting on what interests you about the future of technology and what you hope to build with an AI coding agent. Share your video, portfolio link, and engage in peer discussions.",
     // Paste your YouTube video link here when ready:
     youtubeUrl: "", // e.g. "https://www.youtube.com/watch?v=YOUR_VIDEO_ID"
-    presentationUrl: "https://eclectic-malabi-7933bf.netlify.app/mit-624",
+    presentationUrl: "https://okegbemisunday.netlify.app/mit-624",
     documentUrl: "",
     githubUrl: "",
     discussion1Details: {
